@@ -1,8 +1,7 @@
 using GamifyMyLifeAPI;
-using GamifyMyLifeAPI.Entities;
 using GamifyMyLifeAPI.Data;
+using GamifyMyLifeAPI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +15,9 @@ builder.Services.AddDbContext<GamifyMyLifeContext>(options =>
     options.UseSqlServer(connectionString));
 
 // Add services to the container.
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IActivityService, ActivityService>();
+builder.Services.AddControllers();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

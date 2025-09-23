@@ -19,7 +19,7 @@ namespace GamifyMyLifeAPI.Data
 
         }
 
-        public DbSet<Activity> Activities { get; set; } = default!;
-        public DbSet<Category> Categories { get; set; } = default!;        
+        public DbSet<ActivityEntity> Activities { get; set; } = default!;
+        public DbSet<CategoryEntity> Categories { get; set; } = default!;      
     }
 }

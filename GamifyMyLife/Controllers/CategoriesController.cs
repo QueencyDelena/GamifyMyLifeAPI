@@ -1,10 +1,7 @@
-﻿using GamifyMyLifeAPI.Data;
-using GamifyMyLifeAPI.Entities;
+﻿using GamifyMyLifeAPI.DomainModels;
+using GamifyMyLifeAPI.Dtos;
+using GamifyMyLifeAPI.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Client;
-using Microsoft.IdentityModel.Tokens;
-using System.Diagnostics;
 namespace GamifyMyLifeAPI.Controllers
 {
     [ApiController]
@@ -12,62 +9,34 @@ namespace GamifyMyLifeAPI.Controllers
     public class CategoriesController : ControllerBase
     {
         private readonly ILogger<CategoriesController> _logger;
-        private readonly GamifyMyLifeContext _context;
-        public CategoriesController(ILogger<CategoriesController> logger, GamifyMyLifeContext context)
+        private readonly ICategoryService _categoryService;
+        public CategoriesController(ILogger<CategoriesController> logger, ICategoryService categoryService)
         {
             _logger = logger;
-            _context = context;
+            _categoryService = categoryService;
         }
 
 
         [HttpPost("CreateCategory")]
-        public async Task<IActionResult> CreateCategory([FromBody][Bind("CategoryName, CategoryDescription")] Category category)
+        public async Task<IActionResult> CreateCategory([FromBody]CreateCategoryDto category)
         {
             try
-            {
+            {   
                 if (category == null)
                 {
                     return BadRequest();
                 }
 
-                var result = await _context.Categories.AddAsync(category);
-                _context.SaveChanges();
-
-                return Ok(new { Message = "Successfully created a category!", category });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return StatusCode(500);
-            }
-        }
-
-        [HttpPost("EditCategory")]
-        public async Task<IActionResult> EditCategory([FromBody][Bind("CategoryID, CategoryName, CategoryDescription")] Category category)
-        {
-            try
-            {
-                if (category == null)
+                var request = new Category
                 {
-                    return BadRequest();
-                }
-                var result = await _context.Categories.FindAsync(category.CategoryID);
-                if (result == null)
-                {
-                    return NotFound(new { Message = "Category not found!" });
-                }
+                    CategoryName = category.CategoryName,
+                    CategoryDescription = category.CategoryDescription
+                };
 
-                if (!category.CategoryName.IsNullOrEmpty())
-                {
-                    result.CategoryName = category.CategoryName;
-                }
-                if (!category.CategoryDescription.IsNullOrEmpty())
-                {
-                    result.CategoryDescription = category.CategoryDescription;
-                }
-                await _context.SaveChangesAsync();
+                var result = await _categoryService.CreateCategory(request);
 
-                return Ok(new { Message = "Successfully edited a category!", category });
+
+                return Ok(new { Message = "Successfully created a category!", result });
             }
             catch (Exception ex)
             {
@@ -85,17 +54,49 @@ namespace GamifyMyLifeAPI.Controllers
                 {
                     return Ok(new Category());
                 }
-                var category = await _context.Categories.FindAsync(id);
+                var category = await _categoryService.GetCategory(id);
 
                 if (category == null)
                 {
                     return NotFound(new { Message = "Category not found!" });
                 }
-                else
-                {
-                    return Ok(category);
-                }
+
+                return Ok(category);
+                
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return StatusCode(500);
+            }
+        }
+
+
+        [HttpPost("EditCategory")]
+        public async Task<IActionResult> EditCategory([FromBody] EditCategoryDto category)
+        {
+            try
+            {
+                if (category == null)
+                {
+                    return BadRequest();
+                }
+
+                var request = new Category
+                {
+                    CategoryID = category.CategoryID,
+                    CategoryName = category.CategoryName,
+                    CategoryDescription = category.CategoryDescription
+                };
+
+                var result = await _categoryService.EditCategory(request);
+                if (result == null)
+                {
+                    return NotFound(new { Message = "Category not found!" });
+                }
+
+                return Ok(new { Message = "Successfully edited a category!", result });
+            }            
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
@@ -108,7 +109,7 @@ namespace GamifyMyLifeAPI.Controllers
         {
             try
             {
-                var categories = await _context.Categories.ToListAsync();
+                var categories = await _categoryService.GetCategories();                
                 return Ok(categories);
 
             }
@@ -118,34 +119,18 @@ namespace GamifyMyLifeAPI.Controllers
                 return StatusCode(500);
             }
         }
-        [HttpGet("GetActivities")]
-        public async Task<IActionResult> GetActivities(int categoryId)
+
+        [HttpGet("GetCategoryActivities")]
+        public async Task<IActionResult> GetCategoryActivities(int id)
         {
             try
             {
-                var category = await _context.Categories.FindAsync(categoryId);
-                if (category == null || categoryId == 0)
+                var categories = await _categoryService.GetCategoryActivities(id);
+                if(categories == null)
                 {
-                    if(categoryId == 0)
-                    {
-                        category = new Category()
-                        {
-                            CategoryID = 0,
-                            CategoryName = "Uncategorized",
-                            CategoryDescription = "Uncategorized"
-                        };
-                    }
-                    else
-                    {
-                        return NotFound(new { Message = "Category not found." });
-                    }                        
+                    return NotFound(new {Message = "Category not found."});
                 }
-                var activities = await _context.Activities.Where(a => a.CategoryID == categoryId).ToListAsync();
-                if (activities.IsNullOrEmpty())
-                {
-                    return Ok(new { Message = "No activities found.", category });
-                }
-                return Ok(category);
+                return Ok(categories);
 
             }
             catch (Exception ex)
@@ -160,17 +145,11 @@ namespace GamifyMyLifeAPI.Controllers
         {
             try
             {
-                var category = await _context.Categories.FindAsync(id);
+                var category = await _categoryService.DeleteCategory(id);
                 if (category == null)
                 {
                     return NotFound(new { Message = "Category not found." });
-                }
-
-                _context.Categories.Remove(category);
-                await _context.SaveChangesAsync();
-
-                _context.Activities.Where(a => a.CategoryID == id).ExecuteUpdate(s => s.SetProperty(p => p.CategoryID, p => 0));
-                await _context.SaveChangesAsync();
+                }                
 
                 return Ok(new { Message = "Successfully deleted category!" });
 

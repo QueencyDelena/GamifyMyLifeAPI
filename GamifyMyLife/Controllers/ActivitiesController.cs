@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http.HttpResults;
-using System.Net;
-using GamifyMyLifeAPI.Data;
-using GamifyMyLifeAPI.Entities;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.AspNetCore.Mvc;
+using GamifyMyLifeAPI.Services;
+using GamifyMyLifeAPI.Dtos;
+using GamifyMyLifeAPI.DomainModels;
 
 namespace GamifyMyLifeAPI.Controllers
 {
@@ -18,46 +10,40 @@ namespace GamifyMyLifeAPI.Controllers
     public class ActivitiesController : ControllerBase
     {
         private readonly ILogger<ActivitiesController> _logger;
-        private readonly GamifyMyLifeContext _context;        
+        private readonly IActivityService _activityService;
 
-        public ActivitiesController(GamifyMyLifeContext context, ILogger<ActivitiesController> logger)
+        public ActivitiesController(IActivityService activityService, ILogger<ActivitiesController> logger)
         {
-            _context = context;
+            _activityService = activityService;
             _logger = logger;
         }
         
 
         [HttpPost("CreateActivity")]
-        public async Task<IActionResult> CreateActivity([FromBody][Bind("ActivityName, ActivityDescription, ActivityScore, CategoryID")] Activity activity){
+        public async Task<IActionResult> CreateActivity([FromBody]CreateActivityDto activity){
 
             if(activity == null)
             {
                 return BadRequest();
-            }            
+            }
             try
             {
-                var category = await _context.Categories.FindAsync(activity.CategoryID);
-                if (category == null)
+                var model = new Activity
                 {
-                    if (activity.CategoryID == 0)
-                    {
-                        category = new Category()
-                        {
-                            CategoryName = "Uncategorized",
-                            CategoryDescription = "Uncategorized",
-                            CategoryID = 0
-                        };
-                    }
-                    else
-                    {
-                        return NotFound(new { Message = "Category not found!" });
-                    }
+                    ActivityName = activity.ActivityName,
+                    ActivityDescription = activity.ActivityDescription,
+                    ActivityPoints = activity.ActivityPoints,
+                    CategoryID = activity.CategoryID
+                };
+            
+                var result = await _activityService.CreateActivity(model);
+
+                if(result == null)
+                {
+                    return NotFound(new { Message = "Category not found." });
                 }
-                                
-                var result = await _context.Activities.AddAsync(activity);
-                await _context.SaveChangesAsync();
                 
-                return Ok(new { Message = "Successfully created an activity!", activity });
+                return Ok(new { Message = "Successfully created an activity!", result });
             }
             catch (Exception ex)
             {
@@ -69,86 +55,54 @@ namespace GamifyMyLifeAPI.Controllers
         [HttpGet("GetActivity")]
         public async Task<IActionResult> GetActivity(int id)
         {
-            try
+            if(id <= 0)
             {
-                var activity = await _context.Activities.FindAsync(id);
+                return BadRequest();
+            }
+            var result = await _activityService.GetActivity(id);
 
-                if (activity == null)
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    return Ok(activity);
-                }
+            if (result == null)
+            {
+                return NotFound(new {Message = "No Activity found."});
             }
-            catch (Exception ex) {
-                _logger.LogError(ex, ex.Message);
-                return StatusCode(500);
-            }
+
+            return Ok(result);
         }
 
-        [HttpGet("GetActivities")]
-        public async Task<IActionResult> GetActivities()
+
+        [HttpPost("EditActivity")]
+        public async Task<IActionResult> EditActivity([FromBody] EditActivityDto activity)
         {
-            //TODO: Pagination
             try
             {
-                var activity = await _context.Activities.ToListAsync();
-
                 if (activity == null)
                 {
-                    return Ok(new {Message = "No records found."});
+                    return BadRequest();
                 }
-                else
+
+                var model = new Activity
                 {
-                    return Ok(activity);
-                }
-            }
+                    ActivityID = activity.ActivityID,
+                    ActivityName = activity.ActivityName,
+                    ActivityDescription = activity.ActivityDescription,
+                    ActivityPoints = activity.ActivityPoints,
+                    CategoryID = activity.CategoryID
+                };
+
+                var result = await _activityService.EditActivity(model);
+
+                if (result == null)
+                {
+                    return NotFound( new {Message = "Activity or Category not found!"});
+                }                
+
+                return Ok(new { Message = "Successfully edited a category!", activity });
+            }            
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
                 return StatusCode(500);
             }
-        }
-        [HttpPost("EditActivity")]
-        public async Task<IActionResult> EditActivity([FromBody][Bind("ActivityName, ActivityDescription, ActivityScore, CategoryID")] Activity activity)
-        {
-            try
-            {
-                var category = await _context.Categories.FindAsync(activity.CategoryID);
-                if (category == null && activity.CategoryID != 0)
-                {
-                    return NotFound(new { Message = "Category not found!" });
-                }
-
-                var result = await _context.Activities.FindAsync(activity.ActivityID);
-
-                if (result == null)
-                {
-                    return NotFound(new {Message = "Activity not found!"});
-                }
-
-                if (!string.IsNullOrEmpty(activity.ActivityName))
-                {
-                    result.ActivityName = activity.ActivityName;
-                }
-                if (!string.IsNullOrEmpty(activity.ActivityDescription))
-                {
-                    result.ActivityDescription = activity.ActivityDescription;
-                }
-                result.ActivityScore = activity.ActivityScore;
-                result.CategoryID = activity.CategoryID;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new { Message = "Successfully edited a category!", activity });
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return StatusCode(500);
-            }            
 
         }
 
@@ -157,23 +111,20 @@ namespace GamifyMyLifeAPI.Controllers
         {
             try
             {
-                var activity = await _context.Activities.FindAsync(id);
+                var activity = await _activityService.DeleteActivity(id);
 
-                if(activity == null)
+                if (activity == null)
                 {
-                    return NotFound();
-                }
-                
-                _context.Activities.Remove(activity);
-                _context.SaveChanges();
-
-                return Ok(new {Message = "Successfully deleted activity!"});
+                    return NotFound(new {Message = "Activity not found!"});
+                }                
+                return Ok(new { Message = "Successfully deleted activity!" });
 
             }
-            catch (Exception ex) { 
+            catch (Exception ex)
+            {
                 _logger.LogError(ex, ex.Message);
                 return StatusCode(500);
             }
-        }                    
+        }
     }
 }

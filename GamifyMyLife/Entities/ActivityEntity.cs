@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GamifyMyLifeAPI.Entities
 {
-    public class Activity
+    public class ActivityEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -15,13 +15,14 @@ namespace GamifyMyLifeAPI.Entities
         public string? ActivityDescription { get; set; }
 
         [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Activity score must be more than 0")] 
-        public int ActivityScore { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Activity points must be more than 0")] 
+        public int ActivityPoints { get; set; }
 
         [Required]
         [Range(0, int.MaxValue, ErrorMessage = "Category ID must be more than -1")]
+
         public int CategoryID { get; set; }
 
-
+        public CategoryEntity? Category { get; set; }
     }
 }
