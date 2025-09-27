@@ -45,5 +45,18 @@ namespace GamifyMyLifeAPI.Controllers
                 return StatusCode(500);
             }
         }
+
+        [HttpGet("GetReward")]
+        public async Task<IActionResult> GetReward(int id)
+        {
+            var result = await _rewardsService.GetReward(id);
+
+            if(result == null)
+            {
+                return NotFound(new {Message = "Reward not found!"});
+            }
+
+            return Ok(result);
+        }
     }
 }
