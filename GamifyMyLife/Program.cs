@@ -17,6 +17,7 @@ builder.Services.AddDbContext<GamifyMyLifeContext>(options =>
 // Add services to the container.
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
+builder.Services.AddScoped<IRewardsService, RewardsService>();
 builder.Services.AddControllers();
 
 builder.Services.AddControllers();

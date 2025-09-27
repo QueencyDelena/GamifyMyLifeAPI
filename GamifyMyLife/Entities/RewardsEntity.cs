@@ -6,7 +6,7 @@ namespace GamifyMyLifeAPI.Entities
     public class RewardsEntity
     {
         [Key]
-        public int RewardsID { get; set; }
+        public int RewardID { get; set; }
         [Required]
         public string RewardName { get; set; } = String.Empty;
         public string? RewardDescription { get; set; }
