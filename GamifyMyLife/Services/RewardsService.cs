@@ -31,5 +31,22 @@ namespace GamifyMyLifeAPI.Services
             }
             return RewardsMapper.ToDomain(result);
         }
+
+        public async Task<Rewards?> EditReward(Rewards rewards)
+        {
+            var result = await _context.Rewards.FindAsync(rewards.RewardID);            
+            if(result == null)
+            {
+                return null;
+            }
+            
+            result.RewardName = rewards.RewardName;            
+            result.RewardDescription = rewards.RewardDescription;
+            result.PointsRequiredToRedeem = rewards.PointsRequiredToRedeem;
+            
+            await _context.SaveChangesAsync();
+
+            return RewardsMapper.ToDomain(result);
+        }
     }
 }
