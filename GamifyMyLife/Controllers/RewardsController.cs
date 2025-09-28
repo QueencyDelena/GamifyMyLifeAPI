@@ -94,5 +94,25 @@ namespace GamifyMyLifeAPI.Controllers
             }
         }
 
+
+        [HttpDelete("DeleteReward")]
+        public async Task<IActionResult> DeleteReward(int id)
+        {
+            try
+            {
+                var result = await _rewardsService.DeleteReward(id);
+                if (result == null)
+                {
+                    return NotFound(new { Message = "Reward not found." });
+                }
+                return Ok(new { Message = "Successfully deleted the reward!", result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return StatusCode(500);
+            }
+        }
+
     }
 }

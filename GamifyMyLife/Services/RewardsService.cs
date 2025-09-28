@@ -48,5 +48,18 @@ namespace GamifyMyLifeAPI.Services
 
             return RewardsMapper.ToDomain(result);
         }
+        public async Task<Rewards?> DeleteReward(int id)
+        {
+            var result = await _context.Rewards.FindAsync(id);
+
+            if (result == null)
+            {
+                return null;
+            }
+            _context.Remove(result);
+            await _context.SaveChangesAsync();
+
+            return RewardsMapper.ToDomain(result);
+        }
     }
 }
